@@ -1,4 +1,7 @@
+import os
+from flask import Flask
 from google.cloud import storage
+# from google.cloud import pubsub_v1
 
 def gcs_read(bucket_name, blob_name):
     storage_client = storage.Client()
@@ -11,7 +14,10 @@ def gcs_read(bucket_name, blob_name):
 
     return f
 
+app = Flask(__name__)
 
-file_content = gcs_read("gyucegok-moodyspoc-test", "test.txt")
+file_content = gcs_read("gyucegok-moodyspoc-test", "hello.txt")
 
-print(file_content)
+@app.route('/')
+def hello_world():
+    return file_content
