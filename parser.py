@@ -11,9 +11,6 @@ def gcs_read(bucket_name, blob_name):
 
     return f
 
-# Untitled-1
-from google.cloud import storage
-
 
 file_content = gcs_read("gyucegok-moodyspoc-test", "test.txt")
 
