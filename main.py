@@ -2,9 +2,11 @@ import os
 import time
 from flask import Flask, request, Response
 from google.cloud import storage
+from google.cloud import bigquery
 
 READ_BUCKET = "gyucegok-moodyspoc-test"
 WRITE_BUCKET = "gyucegok-moodyspoc-test2"
+BQ_TABLE_ID = "gyucegok-moodyspoc.statistics.parse_bucket_done"
 
 
 def gcs_read(bucket_name, blob_name):
@@ -34,6 +36,22 @@ def gcs_write(bucket_name, blob_name, content):
         f.write(content)
 
 
+def bq_stream_insert(filename, milliseconds):
+    # Construct a BigQuery client object.
+    client = bigquery.Client()
+
+    rows_to_insert = [
+        {"filename": filename, "milliseconds": milliseconds},
+    ]
+
+    errors = client.insert_rows_json(BQ_TABLE_ID, rows_to_insert)  # Make an API request.
+    if errors == []:
+        print("New rows have been added.")
+    else:
+        print("Encountered errors while inserting rows: {}".format(errors))
+
+
+
 app = Flask(__name__)
 
 file_content = gcs_read(READ_BUCKET, "hello.txt")
@@ -49,6 +67,7 @@ def gcs_notification():
     filename = jsondata['message']['attributes']['objectId']
     filecontent = gcs_read(READ_BUCKET, filename)
     gcs_write(WRITE_BUCKET, filename, filecontent)
+    bq_stream_insert(filename, str(time.time_ns() // 1000000))
 
 #    print(jsondata)
 #    print(jsondata['message'])
