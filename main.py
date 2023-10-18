@@ -1,8 +1,8 @@
 import os
 import time
-from flask import Flask, Response
+from flask import Flask, request, Response
 from google.cloud import storage
-# from google.cloud import pubsub_v1
+
 
 def gcs_read(bucket_name, blob_name):
     storage_client = storage.Client()
@@ -14,8 +14,6 @@ def gcs_read(bucket_name, blob_name):
         returntext = f.read()
         print(returntext)
     return returntext
-
-from google.cloud import storage
 
 
 def gcs_write(bucket_name, blob_name, content):
@@ -33,15 +31,21 @@ def gcs_write(bucket_name, blob_name, content):
         f.write(content)
 
 
+app = Flask(__name__)
 
 file_content = gcs_read("gyucegok-moodyspoc-test", "hello.txt")
 
-app = Flask(__name__)
-
-@app.route('/')
+@app.route('/', methods=['GET'])
 def hello_world():
     gcs_write("gyucegok-moodyspoc-test2", "hello.txt", file_content)
     return file_content + "   Epoch: " + str(time.time_ns())
+
+@app.route('/', methods=['POST'])
+def gcs_notification():
+    print(request.data)
+    print(request.json)
+    return request.json
+
 
 if __name__ == "__main__":
     print(" Starting app...")
