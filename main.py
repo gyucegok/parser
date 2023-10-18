@@ -42,8 +42,11 @@ def hello_world():
 
 @app.route('/', methods=['POST'])
 def gcs_notification():
-    print(request.data)
-    print(request.json)
+    jsondata = request.get_json()
+    print(jsondata)
+#    print(jsondata['message'])
+#    print(jsondata['message']['attributes']['objectId'])
+#    print(jsondata['message']['data'])
     return request.json
 
 
