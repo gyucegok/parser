@@ -3,6 +3,9 @@ import time
 from flask import Flask, request, Response
 from google.cloud import storage
 
+READ_BUCKET = "gyucegok-moodyspoc-test"
+WRITE_BUCKET = "gyucegok-moodyspoc-test2"
+
 
 def gcs_read(bucket_name, blob_name):
     storage_client = storage.Client()
@@ -12,14 +15,14 @@ def gcs_read(bucket_name, blob_name):
 
     with blob.open("r") as f:
         returntext = f.read()
-        print(returntext)
+#        print(returntext)
     return returntext
 
 
 def gcs_write(bucket_name, blob_name, content):
     storage_client = storage.Client()
 
-    blob_name = blob_name + "." + str(time.time_ns())
+#    blob_name = blob_name + "." + str(time.time_ns())
     
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
@@ -33,20 +36,25 @@ def gcs_write(bucket_name, blob_name, content):
 
 app = Flask(__name__)
 
-file_content = gcs_read("gyucegok-moodyspoc-test", "hello.txt")
+file_content = gcs_read(READ_BUCKET, "hello.txt")
 
 @app.route('/', methods=['GET'])
 def hello_world():
-    gcs_write("gyucegok-moodyspoc-test2", "hello.txt", file_content)
+#    gcs_write(WRITE_BUCKET, "hello.txt", file_content)
     return file_content + "   Epoch: " + str(time.time_ns())
 
 @app.route('/', methods=['POST'])
 def gcs_notification():
     jsondata = request.get_json()
-    print(jsondata)
+    filename = jsondata['message']['attributes']['objectId']
+    filecontent = gcs_read(READ_BUCKET, filename)
+    gcs_write(WRITE_BUCKET, filename, filecontent)
+
+#    print(jsondata)
 #    print(jsondata['message'])
 #    print(jsondata['message']['attributes']['objectId'])
 #    print(jsondata['message']['data'])
+    
     return request.json
 
 
