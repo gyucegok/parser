@@ -6,7 +6,7 @@ from google.cloud import bigquery
 
 READ_BUCKET = "gyucegok-moodyspoc-test"
 WRITE_BUCKET = "gyucegok-moodyspoc-test2"
-BQ_TABLE_ID = "gyucegok-moodyspoc.statistics.parse_bucket_done"
+BQ_TABLE_ID = "gyucegok-moodyspoc.statistics.parse-bucket-done"
 
 
 def gcs_read(bucket_name, blob_name):
@@ -36,12 +36,12 @@ def gcs_write(bucket_name, blob_name, content):
         f.write(content)
 
 
-def bq_stream_insert(filename, milliseconds):
+def bq_stream_insert(filename, gcs_event_t, pubsub_publish_t, python_start_t, python_after_gcs_write_t):
     # Construct a BigQuery client object.
     client = bigquery.Client()
 
     rows_to_insert = [
-        {"filename": filename, "milliseconds": milliseconds},
+        {"filename": filename, "gcs_event_time": gcs_event_t, "pubsub_publish_time": pubsub_publish_t, "python_start_time": python_start_t, "python_after_gcs_write_time": python_after_gcs_write_t,},
     ]
 
     errors = client.insert_rows_json(BQ_TABLE_ID, rows_to_insert)  # Make an API request.
@@ -63,12 +63,17 @@ def hello_world():
 
 @app.route('/', methods=['POST'])
 def gcs_notification():
+    python_start_time = str(time.time_ns() // 1000000)
     jsondata = request.get_json()
     filename = jsondata['message']['attributes']['objectId']
+    gcs_event_time = jsondata['message']['attributes']['eventTime']
+    pubsub_publish_time = jsondata['message']['publishTime']
     filecontent = gcs_read(READ_BUCKET, filename)
     gcs_write(WRITE_BUCKET, filename, filecontent)
-    bq_stream_insert(filename, str(time.time_ns() // 1000000))
-
+    python_after_gcs_write_time = str(time.time_ns() // 1000000)
+    bq_stream_insert(filename, gcs_event_time, pubsub_publish_time, python_start_time, python_after_gcs_write_time)
+    print(jsondata)
+    print("Log for file: {} | gcs_event_time {} | pubsub_publish_time {} | python_start_time {} | python_after_gcs_write_time {}".format(filename,gcs_event_time, pubsub_publish_time,python_start_time,python_after_gcs_write_time))
 #    print(jsondata)
 #    print(jsondata['message'])
 #    print(jsondata['message']['attributes']['objectId'])
