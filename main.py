@@ -1,5 +1,6 @@
 import os
 import time
+import datetime
 from flask import Flask, request, Response
 from google.cloud import storage
 from google.cloud import bigquery
@@ -50,6 +51,10 @@ def bq_stream_insert(filename, gcs_event_t, pubsub_publish_t, python_start_t, py
     else:
         print("Encountered errors while inserting rows: {}".format(errors))
 
+def convert_timestring_to_epoch(time_str):
+    time_obj = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+    epoch_time_in_ms = round(int(time_obj.timestamp() * 1000))
+    return epoch_time_in_ms
 
 
 app = Flask(__name__)
@@ -66,8 +71,8 @@ def gcs_notification():
     python_start_time = str(time.time_ns() // 1000000)
     jsondata = request.get_json()
     filename = jsondata['message']['attributes']['objectId']
-    gcs_event_time = jsondata['message']['attributes']['eventTime']
-    pubsub_publish_time = jsondata['message']['publishTime']
+    gcs_event_time = convert_timestring_to_epoch(jsondata['message']['attributes']['eventTime'])
+    pubsub_publish_time = convert_timestring_to_epoch(jsondata['message']['publishTime'])
     filecontent = gcs_read(READ_BUCKET, filename)
     gcs_write(WRITE_BUCKET, filename, filecontent)
     python_after_gcs_write_time = str(time.time_ns() // 1000000)
