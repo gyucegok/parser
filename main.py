@@ -59,23 +59,24 @@ def convert_timestring_to_epoch(time_str):
 
 app = Flask(__name__)
 
-file_content = gcs_read(READ_BUCKET, "hello.txt")
+# file_content = gcs_read(READ_BUCKET, "hello.txt")
 
 @app.route('/', methods=['GET'])
 def hello_world():
 #    gcs_write(WRITE_BUCKET, "hello.txt", file_content)
-    return file_content + "   Epoch: " + str(time.time_ns())
+#    return file_content + "   Epoch: " + str(time.time_ns())
+    return "Hello World" + "   Epoch: " + str(time.time_ns())
 
 @app.route('/', methods=['POST'])
 def gcs_notification():
     python_start_time = str(time.time_ns() // 1000000)
     jsondata = request.get_json()
     filename = jsondata['message']['attributes']['objectId']
-    gcs_event_time = convert_timestring_to_epoch(jsondata['message']['attributes']['eventTime'])
-    pubsub_publish_time = convert_timestring_to_epoch(jsondata['message']['publishTime'])
     filecontent = gcs_read(READ_BUCKET, filename)
     gcs_write(WRITE_BUCKET, filename, filecontent)
     python_after_gcs_write_time = str(time.time_ns() // 1000000)
+    gcs_event_time = convert_timestring_to_epoch(jsondata['message']['attributes']['eventTime'])
+    pubsub_publish_time = convert_timestring_to_epoch(jsondata['message']['publishTime'])
     bq_stream_insert(filename, gcs_event_time, pubsub_publish_time, python_start_time, python_after_gcs_write_time)
     print(jsondata)
     print("Log for file: {} | gcs_event_time {} | pubsub_publish_time {} | python_start_time {} | python_after_gcs_write_time {}".format(filename,gcs_event_time, pubsub_publish_time,python_start_time,python_after_gcs_write_time))
