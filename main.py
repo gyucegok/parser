@@ -16,10 +16,13 @@ def gcs_read(bucket_name, blob_name):
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
 
-    with blob.open("r") as f:
-        returntext = f.read()
-#        print(returntext)
-    return returntext
+    try:
+        with blob.open("r") as f:
+            returntext = f.read()
+            #print(returntext)
+        return returntext
+    except OSError:
+        return -1
 
 
 def gcs_write(bucket_name, blob_name, content):
@@ -33,6 +36,7 @@ def gcs_write(bucket_name, blob_name, content):
     # Mode can be specified as wb/rb for bytes mode.
     # See: https://docs.python.org/3/library/io.html
     
+
     with blob.open("w") as f:
         f.write(content)
 
@@ -72,7 +76,10 @@ def gcs_notification():
     python_start_time = str(time.time_ns() // 1000000)
     jsondata = request.get_json()
     filename = jsondata['message']['attributes']['objectId']
-    filecontent = gcs_read(READ_BUCKET, filename)
+    if gcs_read(READ_BUCKET, filename) != -1:
+        filecontent = gcs_read(READ_BUCKET, filename)
+    else:
+        return '', 204
     gcs_write(WRITE_BUCKET, filename, filecontent)
     python_after_gcs_write_time = str(time.time_ns() // 1000000)
     gcs_event_time = convert_timestring_to_epoch(jsondata['message']['attributes']['eventTime'])
@@ -84,8 +91,7 @@ def gcs_notification():
 #    print(jsondata['message'])
 #    print(jsondata['message']['attributes']['objectId'])
 #    print(jsondata['message']['data'])
-    
-    return request.json
+    return '', 204
 
 
 if __name__ == "__main__":
