@@ -5,9 +5,9 @@ from flask import Flask, request, Response
 from google.cloud import storage
 from google.cloud import bigquery
 
-READ_BUCKET = "gyucegok-moodyspoc-test"
-WRITE_BUCKET = "gyucegok-moodyspoc-test2"
-BQ_TABLE_ID = "gyucegok-moodyspoc.statistics.parse-bucket-done"
+READ_BUCKET = os.environ['READ_BUCKET']
+WRITE_BUCKET = os.environ['WRITE_BUCKET']
+BQ_TABLE_ID = os.environ['BQ_TABLE_ID']
 
 
 def gcs_read(bucket_name, blob_name):
