@@ -21,22 +21,15 @@ def gcs_read(bucket_name, blob_name):
             returntext = f.read()
             #print(returntext)
         return returntext
-    except OSError:
+    except Exception as e:
+        print("File {} not available | Error/Exception: {}".format(blob_name, e))
         return -1
 
 
 def gcs_write(bucket_name, blob_name, content):
     storage_client = storage.Client()
-
-#    blob_name = blob_name + "." + str(time.time_ns())
-    
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
-    
-    # Mode can be specified as wb/rb for bytes mode.
-    # See: https://docs.python.org/3/library/io.html
-    
-
     with blob.open("w") as f:
         f.write(content)
 
@@ -55,15 +48,14 @@ def bq_stream_insert(filename, gcs_event_t, pubsub_publish_t, python_start_t, py
     else:
         print("Encountered errors while inserting rows: {}".format(errors))
 
-def convert_timestring_to_epoch(time_str):
+def convert_timestring_to_epoch(time_str, who):
     time_obj = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
     epoch_time_in_ms = round(int(time_obj.timestamp() * 1000))
-    return epoch_time_in_ms
+    print("{} Time STR: {} | Epoch: {}".format(who,time_str, epoch_time_in_ms))
+    return epoch_time_in_ms       
 
 
 app = Flask(__name__)
-
-# file_content = gcs_read(READ_BUCKET, "hello.txt")
 
 @app.route('/', methods=['GET'])
 def hello_world():
@@ -76,14 +68,13 @@ def gcs_notification():
     python_start_time = str(time.time_ns() // 1000000)
     jsondata = request.get_json()
     filename = jsondata['message']['attributes']['objectId']
-    if gcs_read(READ_BUCKET, filename) != -1:
-        filecontent = gcs_read(READ_BUCKET, filename)
-    else:
+    filecontent = gcs_read(READ_BUCKET, filename)
+    if filecontent == -1:
         return '', 204
     gcs_write(WRITE_BUCKET, filename, filecontent)
     python_after_gcs_write_time = str(time.time_ns() // 1000000)
-    gcs_event_time = convert_timestring_to_epoch(jsondata['message']['attributes']['eventTime'])
-    pubsub_publish_time = convert_timestring_to_epoch(jsondata['message']['publishTime'])
+    gcs_event_time = convert_timestring_to_epoch(jsondata['message']['attributes']['eventTime'], "Event Time")
+    pubsub_publish_time = convert_timestring_to_epoch(jsondata['message']['publishTime'], "Publish Time")
     bq_stream_insert(filename, gcs_event_time, pubsub_publish_time, python_start_time, python_after_gcs_write_time)
     print(jsondata)
     print("Log for file: {} | gcs_event_time {} | pubsub_publish_time {} | python_start_time {} | python_after_gcs_write_time {}".format(filename,gcs_event_time, pubsub_publish_time,python_start_time,python_after_gcs_write_time))
@@ -92,7 +83,6 @@ def gcs_notification():
 #    print(jsondata['message']['attributes']['objectId'])
 #    print(jsondata['message']['data'])
     return '', 204
-
 
 if __name__ == "__main__":
     print(" Starting app...")
