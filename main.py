@@ -50,7 +50,6 @@ def bq_stream_insert(filename, gcs_event_t, pubsub_publish_t, python_start_t, py
         print("Encountered errors while inserting rows: {}".format(errors))
 
 def convert_timestring_to_epoch(time_str, who):
-    r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
     if re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$', time_str):
         time_obj = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
         epoch_time_in_ms = round(int(time_obj.timestamp() * 1000))
