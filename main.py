@@ -50,12 +50,13 @@ def bq_stream_insert(filename, gcs_event_t, pubsub_publish_t, python_start_t, py
         print("Encountered errors while inserting rows: {}".format(errors))
 
 def convert_timestring_to_epoch(time_str, who):
-    if re.match("%Y-%m-%dT%H:%M:%S.%fZ", time_str):
+    r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$'
+    if re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$', time_str):
         time_obj = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
         epoch_time_in_ms = round(int(time_obj.timestamp() * 1000))
         print("{} Time STR: {} | Epoch: {}".format(who,time_str, epoch_time_in_ms))
         return epoch_time_in_ms
-    elif re.match("%Y-%m-%dT%H:%M:%SZ", time_str):
+    elif re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$', time_str):
         time_obj = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ")
         epoch_time_in_ms = round(int(time_obj.timestamp() * 1000))
         print("{} Time STR: {} | Epoch: {}".format(who,time_str, epoch_time_in_ms))
@@ -83,8 +84,8 @@ def gcs_notification():
         return '', 204
     gcs_write(WRITE_BUCKET, filename, filecontent)
     python_after_gcs_write_time = str(time.time_ns() // 1000000)
-    gcs_event_time = convert_timestring_to_epoch(jsondata['message']['attributes']['eventTime'], "Event Time")
-    pubsub_publish_time = convert_timestring_to_epoch(jsondata['message']['publishTime'], "Publish Time")
+    gcs_event_time = convert_timestring_to_epoch(jsondata['message']['attributes']['eventTime'], "GCS Event Time")
+    pubsub_publish_time = convert_timestring_to_epoch(jsondata['message']['publishTime'], "Pub/Sub Publish Time")
     bq_stream_insert(filename, gcs_event_time, pubsub_publish_time, python_start_time, python_after_gcs_write_time)
     print(jsondata)
     print("Log for file: {} | gcs_event_time {} | pubsub_publish_time {} | python_start_time {} | python_after_gcs_write_time {}".format(filename,gcs_event_time, pubsub_publish_time,python_start_time,python_after_gcs_write_time))
