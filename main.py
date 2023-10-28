@@ -1,6 +1,7 @@
 import os
 import time
 import datetime
+import re
 from flask import Flask, request, Response
 from google.cloud import storage
 from google.cloud import bigquery
@@ -49,10 +50,19 @@ def bq_stream_insert(filename, gcs_event_t, pubsub_publish_t, python_start_t, py
         print("Encountered errors while inserting rows: {}".format(errors))
 
 def convert_timestring_to_epoch(time_str, who):
-    time_obj = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
-    epoch_time_in_ms = round(int(time_obj.timestamp() * 1000))
-    print("{} Time STR: {} | Epoch: {}".format(who,time_str, epoch_time_in_ms))
-    return epoch_time_in_ms       
+    if re.match("%Y-%m-%dT%H:%M:%S.%fZ", time_str):
+        time_obj = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+        epoch_time_in_ms = round(int(time_obj.timestamp() * 1000))
+        print("{} Time STR: {} | Epoch: {}".format(who,time_str, epoch_time_in_ms))
+        return epoch_time_in_ms
+    elif re.match("%Y-%m-%dT%H:%M:%SZ", time_str):
+        time_obj = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ")
+        epoch_time_in_ms = round(int(time_obj.timestamp() * 1000))
+        print("{} Time STR: {} | Epoch: {}".format(who,time_str, epoch_time_in_ms))
+        return epoch_time_in_ms
+    else:
+        print("{} Time STR: {} | Epoch: {}".format(who,time_str, "-1"))
+        return -1
 
 
 app = Flask(__name__)
