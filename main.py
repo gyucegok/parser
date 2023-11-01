@@ -2,7 +2,7 @@ import os
 import time
 import datetime
 import re
-from flask import Flask, request, Response
+from fastapi import FastAPI, Request
 from google.cloud import storage
 from google.cloud import bigquery
 
@@ -64,19 +64,16 @@ def convert_timestring_to_epoch(time_str, who):
         print("{} Time STR: {} | Epoch: {}".format(who,time_str, "-1"))
         return -1
 
+app = FastAPI()
 
-app = Flask(__name__)
-
-@app.route('/', methods=['GET'])
+@app.get('/healthz')
 def hello_world():
-#    gcs_write(WRITE_BUCKET, "hello.txt", file_content)
-#    return file_content + "   Epoch: " + str(time.time_ns())
     return "Hello World" + "   Epoch: " + str(time.time_ns())
 
-@app.route('/', methods=['POST'])
-def gcs_notification():
+@app.post('/')
+async def gcs_notification(request: Request):
     python_start_time = str(time.time_ns() // 1000000)
-    jsondata = request.get_json()
+    jsondata = await request.json()
     filename = jsondata['message']['attributes']['objectId']
     filecontent = gcs_read(READ_BUCKET, filename)
     if filecontent == -1:
@@ -93,7 +90,3 @@ def gcs_notification():
 #    print(jsondata['message']['attributes']['objectId'])
 #    print(jsondata['message']['data'])
     return '', 204
-
-if __name__ == "__main__":
-    print(" Starting app...")
-    app.run(host="0.0.0.0", port=8080)
